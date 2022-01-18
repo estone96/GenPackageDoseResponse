@@ -15,30 +15,58 @@ require('glmnet')
 
 run_analysis = function(connection, cdmDatabaseSchema, oracleTempSchema,resultsDatabaseSchema){
   
-  target_drugs = c(1550557, 1506270, 1551099, 40054909, 19016867, 1518254, 920458)
-  target_drugs_route= c(4171047,4132161,4302612,4240824)
-  autoimmune_target = c(4344166,437082,80182,255891,80800,40319772,80809,4117686,254443,134442,4137275)
-  target_outcome = c('mskAE','osteonecrosis','osteoporosis','pathologicfrac')
-  target_age = c(25,64)
+  # target_drugs = c(1550557, 1506270, 1551099, 40054909, 19016867, 1518254, 920458)
+  # target_drugs_route= c(4171047,4132161,4302612,4240824)
+  # autoimmune_target = c(4344166,437082,80182,255891,80800,40319772,80809,4117686,254443,134442,4137275)
+  # target_outcome = c('outcome1','outcome2','outcome3','outcome4')
+  # target_age = c(25,64)
+  # 
+  # outcome1_target = c(4344387,433856,4033089,4067765,81390,4069306,80502,45772069,45772718,45772713,4010333,4067768,4002133,4003482,4015350,45763653,442560,4278672,4129394,4300192,4053828,73571)
+  # outcome4_target = c(4015350,45763653,442560,4278672,4129394,4300192,4053828,73571)
+  # 
+  # outcome3_target = c(4344387)
+  # outcome3_target2 = c(433856)
+  # 
+  # outcome2_target = c(4033089,4067765,81390,4069306,80502,45772069,45772718,45772713,4010333,4067768,4002133,4003482)
+  # 
+  # target_trans1 = 1518254
+  # target_trans2 = 40054909
+  # target_trans3 = 19016867
+  # target_trans4 = 920458
+  # 
+  # target_trans1_out = 6.25
+  # target_trans2_out = 0.75
+  # target_trans3_out = 0.75
+  # target_trans4_out = 6.25
   
-  mskAE_target = c(4344387,433856,4033089,4067765,81390,4069306,80502,45772069,45772718,45772713,4010333,4067768,4002133,4003482,4015350,45763653,442560,4278672,4129394,4300192,4053828,73571)
-  pathologicfrac_target = c(4015350,45763653,442560,4278672,4129394,4300192,4053828,73571)
+  decode_input = function(input_data){
+    return(as.numeric(strsplit(input$target_drugs, split = ';')[[1]]))
+  }
   
-  necrosis_target = c(4344387)
-  necrosis_target2 = c(433856)
+  input = readRDS('studysettings.RDS')
+  target_drugs = decode_input(input$target_drugs)
+  target_drugs_route = decode_input(input$target_drugs_route)
+  autoimmune_target = decode_input(input$target_outcome)
+  target_outcome = c(input$target_outcome_1_name,
+                     input$target_outcome_2_name,
+                     input$target_outcome_3_name,
+                     input$target_outcome_4_name)
+  target_age = c(input$target_age_min, input$target_age_max)
   
-  porosis_target = c(4033089,4067765,81390,4069306,80502,45772069,45772718,45772713,4010333,4067768,4002133,4003482)
+  outcome1_target = decode_input(input$target_outcome_1)
+  outcome2_target = decode_input(input$target_outcome_2)
+  outcome3_target = decode_input(input$target_outcome_3)
+  outcome4_target = decode_input(input$target_outcome_4)
   
-  target_trans1 = 1518254
-  target_trans2 = 40054909
-  target_trans3 = 19016867
-  target_trans4 = 920458
+  target_trans1 = decode_input(input$target_trans_1)
+  target_trans2 = decode_input(input$target_trans_2)
+  target_trans3 = decode_input(input$target_trans_3)
+  target_trans4 = decode_input(input$target_trans_4)
   
-  target_trans1_out = 6.25
-  target_trans2_out = 0.75
-  target_trans3_out = 0.75
-  target_trans4_out = 6.25
-  
+  target_trans1_out = decode_input(input$target_trans_1_out)
+  target_trans2_out = decode_input(input$target_trans_2_out)
+  target_trans3_out = decode_input(input$target_trans_3_out)
+  target_trans4_out = decode_input(input$target_trans_4_out)
   
   
   print("Creating cohorts...")
@@ -97,103 +125,93 @@ df_autoimmune = df_autoimmune$CONCEPT_ID
 
 sql <- "SELECT 0 as codeset_id, c.concept_id FROM (select distinct I.concept_id FROM
 ( 
-  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@mskAE_target)
+  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@outcome1_target)
 UNION  select c.concept_id
   from @vocabulary_database_schema.CONCEPT c
   join @vocabulary_database_schema.CONCEPT_ANCESTOR ca on c.concept_id = ca.descendant_concept_id
-  and ca.ancestor_concept_id in (@mskAE_target)
+  and ca.ancestor_concept_id in (@outcome1_target)
   and c.invalid_reason is null
 ) I
 ) C"
 sql <- SqlRender::render(sql, 
-                         mskAE_target = mskAE_target,
+                         outcome1_target = outcome1_target,
                          vocabulary_database_schema = cdmDatabaseSchema)
 sql <- SqlRender::translate(sql,
                             targetDialect = connection@dbms,
                             oracleTempSchema = oracleTempSchema)
-df_mskAE <- DatabaseConnector::querySql(connection = connection,
+df_outcome1 <- DatabaseConnector::querySql(connection = connection,
                                         sql = sql)
 
-df_mskAE = df_mskAE$CONCEPT_ID
+df_outcome1 = df_outcome1$CONCEPT_ID
 
 sql <- "SELECT 1 as codeset_id, c.concept_id FROM (select distinct I.concept_id FROM
 ( 
-  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@pathologicfrac_target)
+  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@outcome4_target)
 UNION  select c.concept_id
   from @vocabulary_database_schema.CONCEPT c
   join @vocabulary_database_schema.CONCEPT_ANCESTOR ca on c.concept_id = ca.descendant_concept_id
-  and ca.ancestor_concept_id in (@pathologicfrac_target)
+  and ca.ancestor_concept_id in (@outcome4_target)
   and c.invalid_reason is null
 ) I
 ) C"
 sql <- SqlRender::render(sql, 
-                         pathologicfrac_target = pathologicfrac_target,
+                         outcome4_target = outcome4_target,
                          vocabulary_database_schema = cdmDatabaseSchema)
 sql <- SqlRender::translate(sql,
                             targetDialect = connection@dbms,
                             oracleTempSchema = oracleTempSchema)
-df_pathologicfrac <- DatabaseConnector::querySql(connection = connection,
+df_outcome4 <- DatabaseConnector::querySql(connection = connection,
                                                  sql = sql)
 
-df_pathologicfrac = df_pathologicfrac$CONCEPT_ID
+df_outcome4 = df_outcome4$CONCEPT_ID
 
 sql <- "SELECT 1 as codeset_id, c.concept_id FROM (select distinct I.concept_id FROM
 ( 
-  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@necrosis_target)
+  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@outcome3_target)
 UNION  select c.concept_id
   from @vocabulary_database_schema.CONCEPT c
   join @vocabulary_database_schema.CONCEPT_ANCESTOR ca on c.concept_id = ca.descendant_concept_id
-  and ca.ancestor_concept_id in (@necrosis_target)
-  and c.invalid_reason is null
-) I
-LEFT JOIN
-(
-  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@necrosis_target2)
-UNION  select c.concept_id
-  from @vocabulary_database_schema.CONCEPT c
-  join @vocabulary_database_schema.CONCEPT_ANCESTOR ca on c.concept_id = ca.descendant_concept_id
-  and ca.ancestor_concept_id in (@necrosis_target2)
+  and ca.ancestor_concept_id in (@outcome2_target)
   and c.invalid_reason is null
 
-) E ON I.concept_id = E.concept_id
-WHERE E.concept_id is null
+) I
 ) C"
   sql <- SqlRender::render(sql, 
-                           necrosis_target=necrosis_target,
-                           necrosis_target2=necrosis_target2,
+                           outcome3_target=outcome3_target,
+                           outcome3_target2=outcome3_target2,
                            vocabulary_database_schema = cdmDatabaseSchema)
   sql <- SqlRender::translate(sql,
                               targetDialect = connection@dbms,
                               oracleTempSchema = oracleTempSchema)
-  df_necrosis <- DatabaseConnector::querySql(connection = connection,
+  df_outcome3 <- DatabaseConnector::querySql(connection = connection,
                                              sql = sql)
   
-  df_necrosis = df_necrosis$CONCEPT_ID
+  df_outcome3 = df_outcome3$CONCEPT_ID
   
   sql <- "SELECT 1 as codeset_id, c.concept_id FROM (select distinct I.concept_id FROM
 ( 
-  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@porosis_target)
+  select concept_id from @vocabulary_database_schema.CONCEPT where concept_id in (@outcome2_target)
 UNION  select c.concept_id
   from @vocabulary_database_schema.CONCEPT c
   join @vocabulary_database_schema.CONCEPT_ANCESTOR ca on c.concept_id = ca.descendant_concept_id
-  and ca.ancestor_concept_id in (@porosis_target)
+  and ca.ancestor_concept_id in (@outcome2_target)
   and c.invalid_reason is null
 
 ) I
 ) C"
   
   sql <- SqlRender::render(sql, 
-                           porosis_target = porosis_target,
+                           outcome2_target = outcome2_target,
                            vocabulary_database_schema = cdmDatabaseSchema)
   sql <- SqlRender::translate(sql,
                               targetDialect = connection@dbms,
                               oracleTempSchema = oracleTempSchema)
-  df_porosis <- DatabaseConnector::querySql(connection = connection,
+  df_outcome2 <- DatabaseConnector::querySql(connection = connection,
                                             sql = sql)
   
-  df_porosis = df_porosis$CONCEPT_ID
+  df_outcome2 = df_outcome2$CONCEPT_ID
   
-  df_type = c(df_mskAE, df_pathologicfrac, df_necrosis, df_porosis)
+  df_type = c(df_outcome1, df_outcome4, df_outcome3, df_outcome2)
   
   sql <- "SELECT *
 FROM @cdm_database_schema.drug_exposure
@@ -236,7 +254,7 @@ AND drug_concept_id IN (@drug_list) AND route_concept_id in (@target_drugs_route
   
   iterations = length(target_person)
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -252,7 +270,7 @@ AND drug_concept_id IN (@drug_list) AND route_concept_id in (@target_drugs_route
                                res_temp = substr(as.character(res_temp$DRUG_EXPOSURE_START_DATE[1]),1,4)
                                age_target_person = as.numeric(res_temp) - res_person[res_person$PERSON_ID == target_person[i],'YEAR_OF_BIRTH']
                                age_target_person = age_target_person
-                               if (age_target_person <= target_age[1] & age_target_person >= target_age){
+                               if (age_target_person <= target_age[2] & age_target_person >= target_age[1]){
                                  return(target_person[i])
                                }
                              }
@@ -347,17 +365,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   data_failed$condition_start_date = as.Date(data_failed$condition_start_date)
   
-  data_mskAE = data.frame(id = df_mskAE)
-  data_pathologicfrac = data.frame(id = df_pathologicfrac)
-  data_osteonecrosis = data.frame(id = df_necrosis)
-  data_osteoporosis = data.frame(id = df_porosis)
+  data_outcome1 = data.frame(id = df_outcome1)
+  data_outcome4 = data.frame(id = df_outcome4)
+  data_outcome2 = data.frame(id = df_outcome3)
+  data_outcome3 = data.frame(id = df_outcome2)
   
   data_output = list()
   
   patient_unique = unique(data_input$person_id)
   iterations = length(patient_unique)
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -385,17 +403,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
                           temp2 = data.frame(temp2$person_id[1], min(temp2$drug_exposure_start_date), max(temp2$drug_exposure_end_date), sum(temp2$drug_value),sum(temp2$days_supply),max(temp2$drug_value)>=250,0,0,0,0)
                           colnames(temp2) = c('person_id','start_date','end_date','drug_sum','duration_sum','is_pulse',target_outcome[1],target_outcome[2],target_outcome[3],target_outcome[4])
                           if (nrow(temp2_failed) >= 1){
-                            if (temp2_failed$condition_concept_id %in% data_mskAE$id){
-                              temp2$mskAE = 1
+                            if (temp2_failed$condition_concept_id %in% data_outcome1$id){
+                              temp2$outcome1 = 1
                             }
-                            if (temp2_failed$condition_concept_id %in% data_osteonecrosis$id){
-                              temp2$osteonecrosis = 1
+                            if (temp2_failed$condition_concept_id %in% data_outcome2$id){
+                              temp2$outcome2 = 1
                             }
-                            if (temp2_failed$condition_concept_id %in% data_osteoporosis$id){
-                              temp2$osteoporosis = 1
+                            if (temp2_failed$condition_concept_id %in% data_outcome3$id){
+                              temp2$outcome3 = 1
                             }
-                            if (temp2_failed$condition_concept_id %in% data_pathologicfrac$id){
-                              temp2$pathologicfrac = 1
+                            if (temp2_failed$condition_concept_id %in% data_outcome4$id){
+                              temp2$outcome4 = 1
                             }
                           }
                           data_output[[j]] = temp2
@@ -409,17 +427,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
                             temp2 = data.frame(temp2$person_id[1], min(temp2$drug_exposure_start_date), max(temp2$drug_exposure_end_date), sum(temp2$drug_value),sum(temp2$days_supply),max(temp2$drug_value) >= 250,0,0,0,0)
                             colnames(temp2) = c('person_id','start_date','end_date','drug_sum','duration_sum','is_pulse',target_outcome[1],target_outcome[2],target_outcome[3],target_outcome[4])
                             if (nrow(temp2_failed) >= 1){
-                              if (sum(temp2_failed$condition_concept_id %in% data_mskAE$id) >= 1){
-                                temp2$mskAE = 1
+                              if (sum(temp2_failed$condition_concept_id %in% data_outcome1$id) >= 1){
+                                temp2$outcome1 = 1
                               }
-                              if (sum(temp2_failed$condition_concept_id %in% data_osteonecrosis$id) >= 1){
-                                temp2$osteonecrosis = 1
+                              if (sum(temp2_failed$condition_concept_id %in% data_outcome2$id) >= 1){
+                                temp2$outcome2 = 1
                               }
-                              if (sum(temp2_failed$condition_concept_id %in% data_osteoporosis$id) >= 1){
-                                temp2$osteoporosis = 1
+                              if (sum(temp2_failed$condition_concept_id %in% data_outcome3$id) >= 1){
+                                temp2$outcome3 = 1
                               }
-                              if (sum(temp2_failed$condition_concept_id %in% data_pathologicfrac$id) >= 1){
-                                temp2$pathologicfrac = 1
+                              if (sum(temp2_failed$condition_concept_id %in% data_outcome4$id) >= 1){
+                                temp2$outcome4 = 1
                               }
                             }
                             data_output[[j]] = temp2
@@ -442,7 +460,16 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   result$end_date = as.Date(result$end_date)
   result$day_average = result$drug_sum / result$duration_sum
   result$drug_sum_original = result$drug_sum
-  result$drug_sum = log(result$drug_sum)
+  if(input$log_tr =='log_tr'){
+    result$drug_sum = log(result$drug_sum)
+  }
+  if(input$log_tr =='exp_tr'){
+    result$drug_sum = exp(result$drug_sum)
+  }
+  if(input$log_tr =='no_tr'){
+    result$drug_sum = result$drug_sum
+  }
+  
   
   print('Running logistic regression analysis...')
   
@@ -461,23 +488,23 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     
     jpeg(paste(output_name,'.jpg',sep=''),width = 1880, height = 1000)
     par(mfrow = c(4,5))
-    output_n[1] = sum(target$mskAE)
+    output_n[1] = sum(target$outcome1)
     if (output_n[1] != 0){
-      hist(unlist(target[target$mskAE == 1,"drug_sum_original"]),main = target_outcome[1], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$mskAE == 1,"drug_sum"]),main = 'mskAE (log)', xlab = 'Prednisone log(mg)')
-      target$mskAE = factor(target$mskAE)
+      hist(unlist(target[target$outcome1 == 1,"drug_sum_original"]),main = target_outcome[1], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome1 == 1,"drug_sum"]),main = 'outcome1 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome1 = factor(target$outcome1)
       
-      model = glm(mskAE ~ drug_sum, family = binomial(link = 'logit'), data = target)
+      model = glm(outcome1 ~ drug_sum, family = binomial(link = 'logit'), data = target)
       #summary(model)
       
       #exp(model$coefficients)
       p <- predict(model, newdata=target, type="response")
-      pr <- prediction(p, target$mskAE)
+      pr <- prediction(p, target$outcome1)
       output_auc[1] = performance(pr, "auc")@y.values[[1]][1]
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       
-      predictions = prediction(predict(model, newdata=target, type="response"), target$mskAE)
+      predictions = prediction(predict(model, newdata=target, type="response"), target$outcome1)
       plot(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values),
            type="l", lwd=1, ylab="Sensitivity", xlab="Cutoff")
       par(new=TRUE)
@@ -494,7 +521,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
       colnames(spec_fr) = c('cutoff','specificity')
       
-      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_mskAE.csv',sep=""))
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome1.csv',sep=""))
       
       sens = cbind(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values))
       spec = cbind(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values))
@@ -508,17 +535,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$mskAE)
+        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$outcome1)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_mskAE.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome1.csv',sep=""))
       
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[1] = p
@@ -526,23 +553,23 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       output_all[1] = nrow(target)
     }
     
-    output_n[2] = sum(target$osteonecrosis)
+    output_n[2] = sum(target$outcome2)
     if (output_n[2] != 0){
-      hist(unlist(target[target$osteonecrosis == 1,"drug_sum_original"]),main = target_outcome[2], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$osteonecrosis == 1,"drug_sum"]),main = 'Osteonecrosis (log)', xlab = 'Prednisone log(mg)')
-      target$osteonecrosis = factor(target$osteonecrosis)
+      hist(unlist(target[target$outcome2 == 1,"drug_sum_original"]),main = target_outcome[2], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome2 == 1,"drug_sum"]),main = 'outcome2 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome2 = factor(target$outcome2)
       
-      model = glm(osteonecrosis ~ drug_sum, family = binomial(link = 'logit'), data = target)
+      model = glm(outcome2 ~ drug_sum, family = binomial(link = 'logit'), data = target)
       #summary(model)
       #exp(model$coefficients)
       
       p <- predict(model, newdata=target, type="response")
-      pr <- prediction(p, target$osteonecrosis)
+      pr <- prediction(p, target$outcome2)
       output_auc[2] = performance(pr, "auc")@y.values[[1]][1]
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       
-      predictions = prediction(predict(model, newdata=target, type="response"), target$osteonecrosis)
+      predictions = prediction(predict(model, newdata=target, type="response"), target$outcome2)
       plot(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values),
            type="l", lwd=2, ylab="Sensitivity", xlab="Cutoff")
       par(new=TRUE)
@@ -560,17 +587,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       spec_fr = performance(predictions, "spec")
       spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
       colnames(spec_fr) = c('cutoff','specificity')
-      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_osteonecrosis.csv',sep=""))
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome2.csv',sep=""))
       p = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$osteonecrosis)
+        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$outcome2)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_osteonecrosis.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome2.csv',sep=""))
       #1/(1+exp(-(model$coefficients[2]*300+model$coefficients[1])))
       
       out = (log(p/(1-p)) - coef(model)[1])/coef(model)[2]
@@ -578,7 +605,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[2] = p
@@ -586,24 +613,24 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       output_all[2] = nrow(target)
     }
     
-    output_n[3] = sum(target$osteoporosis)
+    output_n[3] = sum(target$outcome3)
     if (output_n[3] != 0){
-      hist(unlist(target[target$osteoporosis == 1,"drug_sum_original"]),main = target_outcome[3], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$osteoporosis == 1,"drug_sum"]),main = 'pathologicfrac (log)', xlab = 'Prednisone log(mg)')
-      target$osteoporosis = factor(target$osteoporosis)
+      hist(unlist(target[target$outcome3 == 1,"drug_sum_original"]),main = target_outcome[3], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome3 == 1,"drug_sum"]),main = 'outcome4 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome3 = factor(target$outcome3)
       
       
-      model = glm(osteoporosis ~ drug_sum, family = binomial(link = 'logit'), data = target)
+      model = glm(outcome3 ~ drug_sum, family = binomial(link = 'logit'), data = target)
       #summary(model)
       #exp(model$coefficients)
       
       p <- predict(model, newdata=target, type="response")
-      pr <- prediction(p, target$osteoporosis)
+      pr <- prediction(p, target$outcome3)
       output_auc[3] = performance(pr, "auc")@y.values[[1]][1]
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       
-      predictions = prediction(predict(model, newdata=target, type="response"), target$osteoporosis)
+      predictions = prediction(predict(model, newdata=target, type="response"), target$outcome3)
       plot(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values),
            type="l", lwd=2, ylab="Sensitivity", xlab="Cutoff")
       par(new=TRUE)
@@ -622,17 +649,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
       colnames(spec_fr) = c('cutoff','specificity')
       
-      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_osteoporosis.csv',sep=""))
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome3.csv',sep=""))
       p = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$osteoporosis)
+        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$outcome3)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_osteoporosis.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome3.csv',sep=""))
       #1/(1+exp(-(model$coefficients[2]*300+model$coefficients[1])))
       
       out = (log(p/(1-p)) - coef(model)[1])/coef(model)[2]
@@ -640,7 +667,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[3] = p
@@ -649,24 +676,24 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     }
     
     
-    output_n[4] = sum(target$pathologicfrac)
+    output_n[4] = sum(target$outcome4)
     if (output_n[4] != 0){
-      hist(unlist(target[target$pathologicfrac == 1,"drug_sum_original"]),main = target_outcome[4], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$pathologicfrac == 1,"drug_sum"]),main = 'pathologicfrac (log)', xlab = 'Prednisone log(mg)')
-      target$pathologicfrac = factor(target$pathologicfrac)
+      hist(unlist(target[target$outcome4 == 1,"drug_sum_original"]),main = target_outcome[4], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome4 == 1,"drug_sum"]),main = 'outcome4 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome4 = factor(target$outcome4)
       
       
-      model = glm(pathologicfrac ~ drug_sum, family = binomial(link = 'logit'), data = target)
+      model = glm(outcome4 ~ drug_sum, family = binomial(link = 'logit'), data = target)
       #summary(model)
       #exp(model$coefficients)
       
       p <- predict(model, newdata=target, type="response")
-      pr <- prediction(p, target$pathologicfrac)
+      pr <- prediction(p, target$outcome4)
       output_auc[4] = performance(pr, "auc")@y.values[[1]][1]
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       
-      predictions = prediction(predict(model, newdata=target, type="response"), target$pathologicfrac)
+      predictions = prediction(predict(model, newdata=target, type="response"), target$outcome4)
       plot(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values),
            type="l", lwd=2, ylab="Sensitivity", xlab="Cutoff")
       par(new=TRUE)
@@ -685,17 +712,17 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
       colnames(spec_fr) = c('cutoff','specificity')
       
-      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_pathologicfrac.csv',sep=""))
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome4.csv',sep=""))
       p = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$pathologicfrac)
+        cf = confusionMatrix(as.factor(ifelse(predict(model, newdata = target, type = 'response') > enu[enu_iter], 1,0)),target$outcome4)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_pathologicfrac.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome4.csv',sep=""))
       #1/(1+exp(-(model$coefficients[2]*300+model$coefficients[1])))
       
       out = (log(p/(1-p)) - coef(model)[1])/coef(model)[2]
@@ -703,7 +730,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[4] = p
@@ -744,7 +771,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       result_temp[[1]]$cohort_definition_id = 1
       result_temp[[2]] = result_binded
       result_temp[[2]]$cohort_definition_id = 2
-      result_temp[[3]] = result_binded[result_binded$pathologicfrac == 1|result_binded$mskAE  == 1|result_binded$osteonecrosis  == 1|result_binded$osteoporosis == 1,]
+      result_temp[[3]] = result_binded[result_binded$outcome4 == 1|result_binded$outcome1  == 1|result_binded$outcome2  == 1|result_binded$outcome3 == 1,]
       result_temp[[3]]$cohort_definition_id = 3
       result_temp = rbindlist(result_temp)
     } else {
@@ -752,7 +779,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       result_temp[[1]]$cohort_definition_id = 1
       result_temp[[2]] = result_binded[result_binded$drug_exposure_type == comparator,]
       result_temp[[2]]$cohort_definition_id = 2
-      result_temp[[3]] = result_binded[result_binded$pathologicfrac == 1|result_binded$mskAE  == 1|result_binded$osteonecrosis  == 1|result_binded$osteoporosis == 1,]
+      result_temp[[3]] = result_binded[result_binded$outcome4 == 1|result_binded$outcome1  == 1|result_binded$outcome2  == 1|result_binded$outcome3 == 1,]
       result_temp[[3]]$cohort_definition_id = 3
       result_temp = rbindlist(result_temp)
     }
@@ -793,7 +820,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   sparsity = apply(result_temp, 2, sum)
   quantile(sparsity)
   result_temp = select(result_temp, names(sparsity[sparsity > 2]))
-  
+  result = result[result$drug_sum >= 0,]
   result_temp = merge(result_temp, result[,c('drug_sum','person_row_id')], by.x = 'rowId', by.y = 'person_row_id')
   
   outcome = 'drug_sum'
@@ -823,7 +850,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   library(kernlab)
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -841,7 +868,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   ps_oc = ps[result[[y_value]] ==0]
   x_oc = result_oc$drug_sum
  
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -985,8 +1012,8 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   results_svm = results_
   
-  mskae_result_svm = results_svm
-  # mskae_result_svm_rbf = results_rbf
+  outcome1_result_svm = results_svm
+  # outcome1_result_svm_rbf = results_rbf
   
   
   
@@ -994,7 +1021,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   library(kernlab)
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -1013,7 +1040,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   x_oc = result_oc$drug_sum
   
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -1161,8 +1188,8 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   results_svm = results_
   
-  porosis_result_svm = results_svm
-  # porosis_result_svm_rbf = results_rbf
+  outcome2_result_svm = results_svm
+  # outcome2_result_svm_rbf = results_rbf
   
   
   
@@ -1172,7 +1199,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   y_value = target_outcome[2]
   
   
-  # numCores <- parallel::detectCores() - 2
+  # numCores <- parallel::detectCores() - 4
   # myCluster <- makeCluster(numCores)
   # registerDoSNOW(myCluster)
   
@@ -1184,7 +1211,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   x_oc = result_oc$drug_sum
   
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -1332,14 +1359,14 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   results_svm = results_
   
-  necrosis_result_svm = results_svm
-  # necrosis_result_svm_rbf = results_rbf
+  outcome3_result_svm = results_svm
+  # outcome3_result_svm_rbf = results_rbf
   
   
   y_value = target_outcome[4]
   
   # 
-  # numCores <- parallel::detectCores() - 2
+  # numCores <- parallel::detectCores() - 4
   # myCluster <- makeCluster(numCores)
   # registerDoSNOW(myCluster)
   
@@ -1351,7 +1378,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   x_oc = result_oc$drug_sum
   
   
-  numCores <- parallel::detectCores() - 2
+  numCores <- parallel::detectCores() - 4
   myCluster <- makeCluster(numCores)
   registerDoSNOW(myCluster)
   
@@ -1500,8 +1527,8 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   results_svm = results_
   
   
-  frac_result_svm = results_svm
-  # frac_result_svm_rbf = results_rbf
+  outcome4_result_svm = results_svm
+  # outcome4_result_svm_rbf = results_rbf
   
   
   
@@ -1712,10 +1739,10 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     return(rbind(titles, aucs, cutoffs, values))
   }
   
-  svm_output(mskae_result_svm,target_outcome[1])
-  svm_output(porosis_result_svm,target_outcome[3])
-  svm_output(necrosis_result_svm,target_outcome[2])
-  svm_output(frac_result_svm,target_outcome[4])
+  svm_output(outcome1_result_svm,target_outcome[1])
+  svm_output(outcome2_result_svm,target_outcome[3])
+  svm_output(outcome3_result_svm,target_outcome[2])
+  svm_output(outcome4_result_svm,target_outcome[4])
   
   print('Running weighted logistic regression analysis...')
   
@@ -1736,22 +1763,22 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     jpeg(paste(output_name,'.jpg',sep=''),width = 1880, height = 1000)
     par(mfrow = c(4,5))
     
-    output_n[1] = sum(target$mskAE)
+    output_n[1] = sum(target$outcome1)
     if (output_n[1] != 0){
-      hist(unlist(target[target$mskAE == 1,"drug_sum_original"]),main = target_outcome[1], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$mskAE == 1,"drug_sum"]),main = 'Bonefracture (log)', xlab = 'Prednisone log(mg)')
-      target$mskAE = factor(target$mskAE)
+      hist(unlist(target[target$outcome1 == 1,"drug_sum_original"]),main = target_outcome[1], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome1 == 1,"drug_sum"]),main = 'Outcome1 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome1 = factor(target$outcome1)
       
       design.ps <- svydesign(ids=~1, weights=~target$ps, data=target)
       
       
-      model = svyglm(mskAE ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
+      model = svyglm(outcome1 ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
       
       
       #exp(model$coefficients)
       p <- predict(model, newdata=target, type="response")
       p = as.data.frame(p)$response
-      pr <- prediction(p, target$mskAE)
+      pr <- prediction(p, target$outcome1)
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       output_auc[1] = performance(pr, "auc")@y.values[[1]][1]
@@ -1774,12 +1801,12 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$mskAE)
+        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$outcome1)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_mskAE_weighted.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome1_weighted.csv',sep=""))
       
       #1/(1+exp(-(model$coefficients[2]*300+model$coefficients[1])))
       p = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
@@ -1788,7 +1815,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       
@@ -1798,20 +1825,20 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       output_all[1] = nrow(target)
     }
     
-    output_n[2] = sum(target$osteoporosis)
+    output_n[2] = sum(target$outcome3)
     if (output_n[2] != 0){
-      hist(unlist(target[target$osteoporosis == 1,"drug_sum_original"]),main = target_outcome[3], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$osteoporosis == 1,"drug_sum"]),main = 'Bonefracture (log)', xlab = 'Prednisone log(mg)')
-      target$osteoporosis = factor(target$osteoporosis)
+      hist(unlist(target[target$outcome3 == 1,"drug_sum_original"]),main = target_outcome[3], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome3 == 1,"drug_sum"]),main = 'Outcome3 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome3 = factor(target$outcome3)
       
       design.ps <- svydesign(ids=~1, weights=~target$ps, data=target)
-      model = svyglm(osteoporosis ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
+      model = svyglm(outcome3 ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
       
       
       #exp(model$coefficients)
       p <- predict(model, newdata=target, type="response")
       p = as.data.frame(p)$response
-      pr <- prediction(p, target$osteoporosis)
+      pr <- prediction(p, target$outcome3)
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       output_auc[2] = performance(pr, "auc")@y.values[[1]][1]
@@ -1831,12 +1858,12 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$osteoporosis)
+        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$outcome3)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_osteoporosis_weighted.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome3_weighted.csv',sep=""))
       
       morp = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       
@@ -1847,7 +1874,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[2] = p
@@ -1856,20 +1883,20 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     }
     
     
-    output_n[3] = sum(target$osteonecrosis)
+    output_n[3] = sum(target$outcome2)
     if (output_n[3] != 0){
-      hist(unlist(target[target$osteonecrosis == 1,"drug_sum_original"]),main = target_outcome[2], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$osteonecrosis == 1,"drug_sum"]),main = 'Bonefracture (log)', xlab = 'Prednisone log(mg)')
-      target$osteonecrosis = factor(target$osteonecrosis)
+      hist(unlist(target[target$outcome2 == 1,"drug_sum_original"]),main = target_outcome[2], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome2 == 1,"drug_sum"]),main = 'Outcome2 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome2 = factor(target$outcome2)
       
       design.ps <- svydesign(ids=~1, weights=~target$ps, data=target)
-      model = svyglm(osteonecrosis ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
+      model = svyglm(outcome2 ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
       
       
       #exp(model$coefficients)
       p <- predict(model, newdata=target, type="response")
       p = as.data.frame(p)$response
-      pr <- prediction(p, target$osteonecrosis)
+      pr <- prediction(p, target$outcome2)
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       output_auc[3] = performance(pr, "auc")@y.values[[1]][1]
@@ -1889,12 +1916,12 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$osteonecrosis)
+        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$outcome2)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_osteonecrosis_weighted.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome2_weighted.csv',sep=""))
       
       morp = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       
@@ -1905,7 +1932,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[3] = p
@@ -1913,20 +1940,20 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       output_all[3] = nrow(target)
     }
     
-    output_n[4] = sum(target$pathologicfrac)
+    output_n[4] = sum(target$outcome4)
     if (output_n[4] != 0){
-      hist(unlist(target[target$pathologicfrac == 1,"drug_sum_original"]),main = target_outcome[4], xlab = 'Prednisone (mg)')
-      hist(unlist(target[target$pathologicfrac == 1,"drug_sum"]),main = 'Bonefracture (log)', xlab = 'Prednisone log(mg)')
-      target$pathologicfrac = factor(target$pathologicfrac)
+      hist(unlist(target[target$outcome4 == 1,"drug_sum_original"]),main = target_outcome[4], xlab = 'Target Drug (mg)')
+      hist(unlist(target[target$outcome4 == 1,"drug_sum"]),main = 'Outcome4 (log)', xlab = 'Target Drug log(mg)')
+      target$outcome4 = factor(target$outcome4)
       
       design.ps <- svydesign(ids=~1, weights=~target$ps, data=target)
-      model = svyglm(pathologicfrac ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
+      model = svyglm(outcome4 ~ drug_sum, design = design.ps, family = binomial(link = 'logit'))
       
       
       #exp(model$coefficients)
       p <- predict(model, newdata=target, type="response")
       p = as.data.frame(p)$response
-      pr <- prediction(p, target$pathologicfrac)
+      pr <- prediction(p, target$outcome4)
       prf <- performance(pr, measure = "tpr", x.measure = "fpr")
       plot(prf, main = "ROC Curve")
       output_auc[4] = performance(pr, "auc")@y.values[[1]][1]
@@ -1946,12 +1973,12 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
-        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$pathologicfrac)
+        cf = confusionMatrix(as.factor(ifelse(p > enu[enu_iter], 1,0)),target$outcome4)
         tmp2 = t(data.frame(c(enu[enu_iter],cf[[4]])))
         colnames(tmp2)[1] = 'Cutoff'
         enu_out[[enu_iter]] = as.data.frame(tmp2)
       }
-      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_pathologicfrac_weighted.csv',sep=""))
+      write.csv(rbindlist(enu_out), paste(output_name,'_cutoff_diagnosis_outcome4_weighted.csv',sep=""))
       
       morp = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       
@@ -1962,7 +1989,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       X1_range = seq(from=min(target$drug_sum), to=max(target$drug_sum)*1.05, by=0.1)
       logits = coef(model)[1]+coef(model)[2]*X1_range
       probs = exp(logits)/(1 + exp(logits))
-      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Prednisone (mg)', ylab = 'Probablity')
+      plot(exp(X1_range), probs, type = 'l',ylim = c(0,1), main = 'Probablity Plot', xlab = 'Target Drug (mg)', ylab = 'Probablity')
       abline(h = p, col = 'red', lty = 'dashed')
       
       output_p[4] = p
@@ -1992,37 +2019,37 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
 
 return_output = function(){
   vanilla_logistic = read.csv('output_all.csv')
-  mskae_svm = read.csv('mskAE _result_svm_all.csv')[,-1]
-  porosis_svm = read.csv('osteoporosis _result_svm_all.csv')[,-1]
-  necrosis_svm = read.csv('osteonecrosis _result_svm_all.csv')[,-1]
-  frac_svm = read.csv('pathologicfrac _result_svm_all.csv')[,-1]
+  outcome1_svm = read.csv('outcome1_result_svm_all.csv')[,-1]
+  outcome2_svm = read.csv('outcome3_result_svm_all.csv')[,-1]
+  outcome3_svm = read.csv('outcome2_result_svm_all.csv')[,-1]
+  outcome4_svm = read.csv('outcome4_result_svm_all.csv')[,-1]
   weight_logistic = read.csv('output_all_weight.csv')
   
-  mskAE = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[1]]),
-                t(mskae_svm),
+  outcome1 = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[1]]),
+                t(outcome1_svm),
                 c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[1]]))
   
-  rownames(mskAE) = rep(target_outcome[1],6)
+  rownames(outcome1) = rep(target_outcome[1],6)
   
-  porosis = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[3]]),
-                  t(porosis_svm),
+  outcome2 = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[3]]),
+                  t(outcome2_svm),
                   c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[3]]))
   
-  rownames(porosis) = rep(target_outcome[3],6)
+  rownames(outcome2) = rep(target_outcome[3],6)
   
-  necrosis= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[2]]),
-                  t(necrosis_svm),
+  outcome3= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[2]]),
+                  t(outcome3_svm),
                   c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[2]]))
   
-  rownames(necrosis) = rep(target_outcome[2],6)
+  rownames(outcome3) = rep(target_outcome[2],6)
   
-  pathologicfrac= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[4]]),
-                        t(frac_svm),
-                        c('weighted logistic regression',weight_logistic[c(1,2,3),'PathologicFacture']))
+  outcome4= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[4]]),
+                        t(outcome4_svm),
+                        c('weighted logistic regression',weight_logistic[c(1,2,3),'Outcome4']))
   
-  rownames(pathologicfrac) = rep(target_outcome[4],6)
+  rownames(outcome4) = rep(target_outcome[4],6)
   
-  final_output = rbind(mskAE, porosis, necrosis, pathologicfrac)
+  final_output = rbind(outcome1, outcome2, outcome3, outcome4)
   colnames(final_output) = c('Model Type','AUC','Cutoff(p)','Cutoff(mg)')
   
   print(final_output)

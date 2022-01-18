@@ -145,9 +145,8 @@ server <- function(input, output) {
         params_input[['target_trans_3_out']] = input$target_trans_3_out
         params_input[['target_trans_4']] = input$target_trans_4
         params_input[['target_trans_4_out']] = input$target_trans_4_out
-        params_input[['log_tr']] = input$log_tr
-        params_input[['exp_tr']] = input$exp_tr
-        params_input[['no_tr']] = input$no_tr
+        params_input[['log_tr']] = input$transform_data
+        return(params_input)
     })
     
     
