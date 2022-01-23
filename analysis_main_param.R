@@ -749,14 +749,6 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   
   steroid_analysis(result, output_name = 'output_all')
-  steroid_analysis(result, min_dose = 0, end_dose = 7.5, output_name = 'output_low_dose')
-  steroid_analysis(result, min_dose = 7.5, end_dose = 30, output_name = 'output_medium_dose')
-  steroid_analysis(result, min_dose = 30, end_dose = 100, output_name = 'output_high_dose')
-  steroid_analysis(result, min_dose = 100, end_dose = Inf, output_name = 'output_very_high_dose')
-  steroid_analysis(result, pulse = T, output_name = 'output_pulse')
-  #
-  steroid_analysis(result[result$drug_sum_original > 2000,], output_name = 'output_sub_2000')
-  steroid_analysis(result[result$drug_sum_original <= 2000,], output_name = 'output_over_2000')
   
   print("Constructing features for propensity score analysis...")
   
@@ -1795,7 +1787,16 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       
       sens = cbind(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values))
       spec = cbind(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values))
+      ppv_npv <- performance(pr, measure = "ppv", x.measure = "npv")
+      ppv_npv = data.frame(ppv_npv@alpha.values, ppv_npv@y.values, ppv_npv@x.values)
+      colnames(ppv_npv) = c('cutoff','ppv','npv')
       
+      spec_fr = performance(predictions, "spec")
+      spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
+      colnames(spec_fr) = c('cutoff','specificity')
+      
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome1.csv',sep=""))
+
       morp = sens[which.min(apply(sens, 1, function(x) min(colSums(abs(t(spec) - x))))), 1]
       
       enu_out = list()
@@ -1854,7 +1855,16 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       
       sens = cbind(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values))
       spec = cbind(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values))
+      ppv_npv <- performance(pr, measure = "ppv", x.measure = "npv")
+      ppv_npv = data.frame(ppv_npv@alpha.values, ppv_npv@y.values, ppv_npv@x.values)
+      colnames(ppv_npv) = c('cutoff','ppv','npv')
       
+      spec_fr = performance(predictions, "spec")
+      spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
+      colnames(spec_fr) = c('cutoff','specificity')
+      
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome2.csv',sep=""))
+
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
@@ -1912,7 +1922,15 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       
       sens = cbind(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values))
       spec = cbind(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values))
+      ppv_npv <- performance(pr, measure = "ppv", x.measure = "npv")
+      ppv_npv = data.frame(ppv_npv@alpha.values, ppv_npv@y.values, ppv_npv@x.values)
+      colnames(ppv_npv) = c('cutoff','ppv','npv')
       
+      spec_fr = performance(predictions, "spec")
+      spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
+      colnames(spec_fr) = c('cutoff','specificity')
+      
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome3.csv',sep=""))
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
@@ -1969,7 +1987,15 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
       
       sens = cbind(unlist(performance(predictions, "sens")@x.values), unlist(performance(predictions, "sens")@y.values))
       spec = cbind(unlist(performance(predictions, "spec")@x.values), unlist(performance(predictions, "spec")@y.values))
+      ppv_npv <- performance(pr, measure = "ppv", x.measure = "npv")
+      ppv_npv = data.frame(ppv_npv@alpha.values, ppv_npv@y.values, ppv_npv@x.values)
+      colnames(ppv_npv) = c('cutoff','ppv','npv')
       
+      spec_fr = performance(predictions, "spec")
+      spec_fr = data.frame(spec_fr@x.values, spec_fr@y.values)
+      colnames(spec_fr) = c('cutoff','specificity')
+      
+      write.csv(merge(spec_fr, ppv_npv, by = 'cutoff'), paste(output_name,'_cutoff_outcome4.csv',sep=""))
       enu_out = list()
       enu = seq(0.1,0.9,by = 0.1)
       for (enu_iter in 1:length(enu)){
@@ -2008,52 +2034,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
   
   
   steroid_analysis_weight(result, ps, output_name = 'output_all_weight')
-  steroid_analysis_weight(result, ps, min_dose = 0, end_dose = 7.5, output_name = 'output_low_dose_weight')
-  steroid_analysis_weight(result, ps, min_dose = 7.5, end_dose = 30, output_name = 'output_medium_dose_weight')
-  steroid_analysis_weight(result, ps, min_dose = 30, end_dose = 100, output_name = 'output_high_dose_weight')
-  steroid_analysis_weight(result, ps, min_dose = 100, end_dose = Inf, output_name = 'output_very_high_dose_weight')
-  steroid_analysis_weight(result, ps, pulse = T, output_name = 'output_pulse_weight')
   
   print('Analysis completed')
 }
-
-return_output = function(){
-  vanilla_logistic = read.csv('output_all.csv')
-  outcome1_svm = read.csv('outcome1_result_svm_all.csv')[,-1]
-  outcome2_svm = read.csv('outcome3_result_svm_all.csv')[,-1]
-  outcome3_svm = read.csv('outcome2_result_svm_all.csv')[,-1]
-  outcome4_svm = read.csv('outcome4_result_svm_all.csv')[,-1]
-  weight_logistic = read.csv('output_all_weight.csv')
-  
-  outcome1 = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[1]]),
-                t(outcome1_svm),
-                c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[1]]))
-  
-  rownames(outcome1) = rep(target_outcome[1],6)
-  
-  outcome2 = rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[3]]),
-                  t(outcome2_svm),
-                  c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[3]]))
-  
-  rownames(outcome2) = rep(target_outcome[3],6)
-  
-  outcome3= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[2]]),
-                  t(outcome3_svm),
-                  c('weighted logistic regression',weight_logistic[c(1,2,3),target_outcome[2]]))
-  
-  rownames(outcome3) = rep(target_outcome[2],6)
-  
-  outcome4= rbind(c('logistic regression',vanilla_logistic[c(1,2,3),target_outcome[4]]),
-                        t(outcome4_svm),
-                        c('weighted logistic regression',weight_logistic[c(1,2,3),'Outcome4']))
-  
-  rownames(outcome4) = rep(target_outcome[4],6)
-  
-  final_output = rbind(outcome1, outcome2, outcome3, outcome4)
-  colnames(final_output) = c('Model Type','AUC','Cutoff(p)','Cutoff(mg)')
-  
-  print(final_output)
-  write.csv(final_output, 'final_output.csv')
-}
-
 
