@@ -1998,7 +1998,7 @@ WHERE drug_concept_id IN (SELECT steroid_concept_id FROM #@drug_table)
     }
     
     output_return = rbind(output_auc,output_p, output, output_n, output_all)
-    colnames(output_return) = c(target_outcome[1],target_outcome[3],target_outcome[2],'PathologicFacture')
+    colnames(output_return) = c(target_outcome[1],target_outcome[3],target_outcome[2],'Outcome4')
     rownames(output_return) = c('AUC','Cutoff Probablity','Cutoff Value','Number of Items','Total Items')
     dev.off()
     par(mfrow = c(1,1))
