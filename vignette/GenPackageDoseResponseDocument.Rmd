@@ -1,0 +1,59 @@
+---
+title: "SteroidDoseStudy"
+author: "Sun Gyu Chae and Yeesuk Kim"
+date: "2022-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+This package generates dose study package for user-defined index drugs by utilizing R shiny GUI and determines the cutoff level of maximum AUC using logistic regression, support vector machine and one-class support vector machine by utilizing generalized propensity score analysis. 
+
+## Features
+This package automatically generates dose study package by using user-defined..
+1. 4 target drug groups for study
+2. Target prerequsite condition group 
+3. Target outcome condition group
+4. Drug potency generalization by applying weights
+5. Transformation of cumulative drug usage (log, exponential)
+
+#How to run
+==========
+1. After cloning ths repository, double click Rproj file to launch package, and open 'app.r'
+
+2. In R Studio application, please click 'Run App' button on top right in the script panel.
+
+3. Follow the insructions below. 
+
+3.1. Supply user-defined drug groups and condition groups for the study.
+
+3.2. If drug potency varies among drug groups, apply weights for generalization of potency among drug groups.
+
+3.3. If it is believed that transformation of variable (cumulative drug usage) is required, please select drug transformation measures.
+
+3.4. Finally, click get package button in sidebar to access your package.
+
+3.5. To operate your study, follow instructions below:
+Add below details of your CDM database in "CodeToRun.R"
+```{r}
+cdmDatabaseSchema <- "" ## server_database.server_scheme 
+resultsDatabaseSchema <- ""
+
+connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "", #"postgresql"
+                                                                server = "",
+                                                                user = "",
+                                                                password = "",
+                                                                port = NULL)
+```
+
+When error caused by missing JDBC drivers, download required JDBC drivers using:
+```{r}
+Sys.setenv("DATABASECONNECTOR_JAR_FOLDER" = "C:/JDBC") 
+downloadJdbcDrivers() #postgresql, redshift .. etc
+```
+
+4. Congratulations. All done 
+

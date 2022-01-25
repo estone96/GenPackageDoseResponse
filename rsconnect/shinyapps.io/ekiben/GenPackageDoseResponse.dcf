@@ -1,0 +1,13 @@
+name: GenPackageDoseResponse
+title: GenPackageDoseResponse
+username:
+account: ekiben
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5503614
+bundleId: 5504414
+url: https://ekiben.shinyapps.io/GenPackageDoseResponse/
+when: 1643077424.99152
+lastSyncTime: 1643077424.99152
+asMultiple: FALSE
+asStatic: FALSE
