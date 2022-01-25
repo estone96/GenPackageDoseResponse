@@ -2,7 +2,7 @@
 
 This is the repository for package generator for dose study.
 
-![Screenshot](../master/assets/image1.png)
+![Screenshot](../master/assets/image1.png?raw=true)
 
 This package generates dose study package for user-defined index drugs by utilizing R shiny GUI and determines the cutoff level of maximum AUC using logistic regression, support vector machine and one-class support vector machine by utilizing generalized propensity score analysis. 
 
@@ -19,17 +19,16 @@ This package automatically generates dose study package by using user-defined..
 https://ekiben.shinyapps.io/GenPackageDoseResponse/
 
 2. Supply user-defined drug groups and condition groups for the study.
-![Screenshot](../master/assets/image2.png)
-![Screenshot](../master/assets/image3.png)
+![Screenshot](../master/assets/image2.png?raw=true)
+![Screenshot](../master/assets/image3.png?raw=true)
 
 3. If drug potency varies among drug groups, apply weights for generalization of potency among drug groups.
-![Screenshot](../master/assets/image4.png)
+![Screenshot](../master/assets/image4.png?raw=true)
 
 4. If it is believed that transformation of variable (cumulative drug usage) is required, please select drug transformation measures.
-![Screenshot](../master/assets/image5.png)
+![Screenshot](../master/assets/image5.png?raw=true)
 
 5. Finally, click get package button in sidebar to access your package.
-![Screenshot](screenshot.png)
 
 6. To operate your study, follow instructions below:
 Add below details of your CDM database in "CodeToRun.R"
