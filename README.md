@@ -19,14 +19,14 @@ This package automatically generates dose study package by using user-defined..
 https://ekiben.shinyapps.io/GenPackageDoseResponse/
 
 2. Supply user-defined drug groups and condition groups for the study.
-![Screenshot](../master/assets/image2.png?raw=true)
-![Screenshot](../master/assets/image3.png?raw=true)
+![Screenshot](https://raw.githubusercontent.com/estone96/GenPackageDoseResponse/main/assets/image5.png)
+![Screenshot](https://raw.githubusercontent.com/estone96/GenPackageDoseResponse/main/assets/image5.png)
 
 3. If drug potency varies among drug groups, apply weights for generalization of potency among drug groups.
-![Screenshot](../master/assets/image4.png?raw=true)
+![Screenshot](https://raw.githubusercontent.com/estone96/GenPackageDoseResponse/main/assets/image5.png)
 
 4. If it is believed that transformation of variable (cumulative drug usage) is required, please select drug transformation measures.
-![Screenshot](../master/assets/image5.png?raw=true)
+![Screenshot](https://raw.githubusercontent.com/estone96/GenPackageDoseResponse/main/assets/image5.png)
 
 5. Finally, click get package button in sidebar to access your package.
 
